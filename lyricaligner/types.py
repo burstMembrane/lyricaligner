@@ -2,6 +2,8 @@
 
 from typing import Any, List, Tuple
 
+from lyricaligner.formatters import Word
+
 # Audio processing types
 AudioArray = Any  # Typically a numpy array of audio samples
 
