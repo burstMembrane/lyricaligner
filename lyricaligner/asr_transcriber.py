@@ -73,7 +73,6 @@ class ASRTranscriber:
     def tokenize(self, text_path):
         """Tokenize text into input IDs for the model"""
         text = self.lp.process(text_path)
-        logger.info(f"Tokenizing text: {text}")
         return self.processor.tokenizer(text).input_ids
 
     def _recognize(self, audio_segment):
