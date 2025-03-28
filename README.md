@@ -40,32 +40,35 @@ The tool will generate:
 
 ```python
 from lyricaligner import LyricsAligner
-
-# Initialize the aligner
-aligner = LyricsAligner()
-
-# Method 1: Align using file paths
-words, lrc = aligner.sync(
-    audio_fn="path/to/song.mp3",
-    text_fn="path/to/lyrics.txt", 
-    output_dir="output"
-)
+    audio_path = "./path/to/audio"
+    transcript_path = "./path/to/transcript"
+    output_path = "./output"
+    aligner = LyricsAligner()
+    # pass save to save output files e.g CSV, LRC
+    words = aligner.sync(
+        audio_fn=audio_path, text_fn=transcript_path, output_dir=output_path, save=True
+    )
+    print(words)
 
 # Method 2: Align using audio array and text string
-import numpy as np
-
-# Make sure audio is at the target sample rate
-audio_array = np.array([...])  # Audio samples
-lyrics = "These are the lyrics to align"
-
-words, lrc = aligner.sync_from_array(
-    audio_array=audio_array,
-    lyrics_text=lyrics,
-    output_name="alignment"
-)
+    audio, sr = librosa.load(audio_path, sr=None)
+    # resample to 16000
+    audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
+    with open(transcript_path, "r") as f:
+        text = f.read()
+    # we need to pass in the output name
+    output_name = Path(audio_path).stem
+    words = aligner.sync_from_array(
+        audio_array=audio,
+        lyrics_text=text,
+        output_dir=output_path,
+        output_name=output_name,
+        save=True,
+    )
+    print()
+    print(words)
 
 # The words object contains timing information for each word
-# The lrc string contains the formatted LRC file content
 ```
 
 ## Project Structure
