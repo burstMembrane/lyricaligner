@@ -64,7 +64,6 @@ class ASRTranscriber:
 
     def _process_segment(self, audio_segment):
         """Process a single audio segment through the ASR model"""
-        # Preprocess audio
         inputs = self.processor(
             audio_segment,
             return_tensors="pt",
@@ -72,7 +71,6 @@ class ASRTranscriber:
             sampling_rate=TARGET_SR,
         ).input_values.to(self.device)
 
-        # Run inference
         with torch.inference_mode():
             logits = self.model(inputs).logits
 
