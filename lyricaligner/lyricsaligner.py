@@ -21,7 +21,11 @@ class LyricsAligner:
     """Main class for aligning lyrics with audio"""
 
     def __init__(
-        self, model_id=DEFAULT_MODEL, device="cpu", blank_id=DEFAULT_BLANK_TOKEN_ID
+        self,
+        model_id=DEFAULT_MODEL,
+        device="cpu",
+        blank_id=DEFAULT_BLANK_TOKEN_ID,
+        batch_size=2,
     ) -> None:
         """Initialize the LyricsAligner
 
@@ -29,7 +33,9 @@ class LyricsAligner:
             model_id: ASR model ID to use (defaults to DEFAULT_MODEL)
             blank_id: ID of the blank token in the ASR model
         """
-        self.asr = ASRTranscriber(model_id=model_id, device=device)
+        self.asr = ASRTranscriber(
+            model_id=model_id, device=device, batch_size=batch_size
+        )
         self.lp = LyricsProcessor()
         self.blank_id = blank_id
 

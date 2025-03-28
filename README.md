@@ -10,6 +10,10 @@ Forked & refactored from [lyrics-sync](https://github.com/mikezzb/lyrics-sync)
 pip install lyricaligner
 ```
 
+### Models to try
+
+[jonatasgrosman/wav2vec2-large-xlsr-53-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english)
+
 ## Requirements
 
 - Python >= 3.12
