@@ -1,0 +1,20 @@
+[project]
+name = "lyricaligner"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "librosa==0.10.2.post1",
+    "numba>=0.54",
+    "pandas>=2.2.3",
+    "torch>=2.6.0",
+    "transformers>=4.50.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lyricaligner"]
+
+[project.scripts]
+lyricaligner = "lyricaligner.cli:main"
