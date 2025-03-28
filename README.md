@@ -1,6 +1,8 @@
 # LyricAligner
 
-A Python tool for synchronizing lyrics with audio files by using a Wav2Vec2 model to auto-aligning text with word-level timestamps.
+A Python tool for synchronizing lyrics with audio files by using a Wav2Vec2 model to auto-align text with word-level timestamps.
+
+Forked & refactored from [lyrics-sync](https://github.com/mikezzb/lyrics-sync)
 
 ## Installation
 
