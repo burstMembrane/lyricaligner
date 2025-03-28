@@ -54,6 +54,9 @@ class WordList:
             ]
         )
 
+    def __len__(self):
+        return len(self.words)
+
     def __repr__(self):
         return "".join(word.as_str() for word in self.words)
 
