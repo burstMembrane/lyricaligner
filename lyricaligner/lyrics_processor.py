@@ -14,17 +14,21 @@ class Segment:
 
 
 class LyricsProcessor:
-    def __init__(self, separator: str = SEPARATOR) -> None:
+    def __init__(self, separator: str = SEPARATOR, is_upper=True) -> None:
         self.separator = separator
+        self.is_upper = is_upper
 
     def process(self, text_path):
         """Process lyrics text file for alignment"""
         text = read_text(text_path)
         return self._preprocess_text(text)
 
-    def _preprocess_text(self, text: str):
+    def _preprocess_text(self, text: str, is_upper=True):
         """Preprocess text for alignment by converting to lowercase and adding separators"""
-        text = text.lower()
+        if is_upper:
+            text = text.upper()
+        else:
+            text = text.lower()
         text = text.replace(" ", self.separator)
         text = text.replace("\n", self.separator)
         text = text.replace("'", "'")
