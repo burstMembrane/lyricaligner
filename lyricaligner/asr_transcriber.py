@@ -24,6 +24,7 @@ class ASRTranscriber:
     def __init__(
         self, model_id=None, device="cpu", batch_size=1, is_upper=True
     ) -> None:
+        self.batch_size = batch_size
         self.model_id = model_id or DEFAULT_MODEL
         self.device = device
         self.processor = Wav2Vec2Processor.from_pretrained(self.model_id)
@@ -48,12 +49,14 @@ class ASRTranscriber:
         has_lower = any(t.islower() for t in tokens if t.isalpha())
         return has_upper and not has_lower
 
-    def transcribe(self, audio: np.ndarray, batch_size: int = 1):
+    def transcribe(self, audio: np.ndarray):
         """Transcribe audio into text with timing information"""
         self.total_duration_s = 0  # Reset duration
         segs = get_audio_segments(audio)
         logger.info(f"Segmenting audio into {len(segs)} segments")
-        segs = [segs[i : i + batch_size] for i in range(0, len(segs), batch_size)]
+        segs = [
+            segs[i : i + self.batch_size] for i in range(0, len(segs), self.batch_size)
+        ]
         # Process all segments
         logits = torch.cat(
             [
@@ -96,7 +99,7 @@ class ASRTranscriber:
         """Return sorted token labels used by the tokenizer"""
         return [
             k
-            for k, v in sorted(
+            for k, _ in sorted(
                 self.processor.tokenizer.get_vocab().items(), key=lambda x: x[1]
             )
         ]
