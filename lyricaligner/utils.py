@@ -16,7 +16,9 @@ window_size = int(TARGET_SR * WINDOW_LENGTH)  # 15 seconds of audio at TARGET_SR
 hop_length = window_size
 
 
-def get_audio_segments(audio, window_size=window_size, hop_length=hop_length):
+def get_audio_segments(
+    audio: np.ndarray, window_size=window_size, hop_length=hop_length
+):
     """Split audio into fixed-length segments for processing
 
     Args:

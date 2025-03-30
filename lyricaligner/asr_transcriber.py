@@ -1,6 +1,8 @@
 import logging
 
+import numpy as np
 import torch
+from tqdm import tqdm
 from transformers import (
     Wav2Vec2ForCTC,
     Wav2Vec2Processor,
@@ -46,21 +48,21 @@ class ASRTranscriber:
         has_lower = any(t.islower() for t in tokens if t.isalpha())
         return has_upper and not has_lower
 
-    def transcribe(self, audio):
+    def transcribe(self, audio: np.ndarray, batch_size: int = 1):
         """Transcribe audio into text with timing information"""
         self.total_duration_s = 0  # Reset duration
         segs = get_audio_segments(audio)
         logger.info(f"Segmenting audio into {len(segs)} segments")
-
-        # Process first segment
-        logits = self._recognize(segs[0])
-
-        # Process and concatenate the rest
-        for seg in segs[1:]:
-            logits_seg = self._recognize(seg)
-            logits = torch.cat((logits, logits_seg), dim=1)
-
-        # Convert to log probabilities for decoding
+        segs = [segs[i : i + batch_size] for i in range(0, len(segs), batch_size)]
+        # Process all segments
+        logits = torch.cat(
+            [
+                self._recognize(seg)
+                for seg in tqdm(segs, desc="Processing segments")
+                if self._recognize(seg).any()
+            ],
+            dim=1,
+        )
         emission = torch.log_softmax(logits, dim=-1)[0].cpu().detach()
         pred = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(pred)
@@ -88,7 +90,7 @@ class ASRTranscriber:
         self.total_duration_s += segment_sec
         with torch.inference_mode():
             logits = self.model(inputs).logits
-        return logits.cpu().detach()
+        return logits
 
     def get_labels(self):
         """Return sorted token labels used by the tokenizer"""

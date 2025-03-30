@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from itertools import groupby
 
 from lyricaligner.alignment import Point
 from lyricaligner.config import SEPARATOR
@@ -7,8 +8,8 @@ from lyricaligner.utils import read_text
 
 
 @dataclass
-class Segment:
-    word: str
+class CharacterSegment:
+    character: str
     start: int
     end: int
 
@@ -34,49 +35,57 @@ class LyricsProcessor:
         text = text.replace("'", "'")
         return text
 
-    def get_words_from_path(self, text, path, frame_duration):
+    def get_words_from_path(
+        self, source_text: str, alignment_path: list[Point], frame_duration: float
+    ):
         """Extract words from alignment path"""
         # Skip repeating characters
-        segments = []
-        i1, i2 = 0, 0
-
-        while i1 < len(path):
-            while i2 < len(path) and path[i1].token_index == path[i2].token_index:
-                i2 += 1
-            segments.append(
-                Segment(
-                    text[path[i1].token_index],
-                    path[i1].time_index,
-                    path[i2 - 1].time_index + 1,
+        character_segments = []
+        for i in range(len(alignment_path)):
+            if (
+                i == 0
+                or alignment_path[i].token_index != alignment_path[i - 1].token_index
+            ):
+                # Start of a new character segment
+                start_idx = i
+            if (
+                i == len(alignment_path) - 1
+                or alignment_path[i].token_index != alignment_path[i + 1].token_index
+            ):
+                # End of current character segment
+                character_segments.append(
+                    CharacterSegment(
+                        character=source_text[alignment_path[i].token_index],
+                        start=alignment_path[start_idx].time_index,
+                        end=alignment_path[i].time_index + 1,
+                    )
                 )
-            )
-            i1 = i2
 
-        return self._merge_segments(segments, frame_duration)
+        return self._merge_segments_to_words(character_segments, frame_duration)
 
-    def _merge_segments(self, segments, frame_duration):
+    def to_word(self, character_segments: list[CharacterSegment]):
+        return "".join(seg.character for seg in character_segments)
+
+    def _merge_segments_to_words(
+        self, character_segments: list[CharacterSegment], frame_duration: float
+    ):
         """Merge character segments into words"""
         words = []
-        i1, i2 = 0, 0
-
-        while i1 < len(segments):
-            if i2 >= len(segments) or segments[i2].word == self.separator:
-                if i1 != i2:
-                    segs = segments[i1:i2]
-                    word = "".join([seg.word for seg in segs])
-                    start = segs[0].start * frame_duration
-                    end = segs[-1].end * frame_duration
-                    words.append(
-                        Word(
-                            text=word,
-                            start=start,
-                            end=end,
-                        )
+        for is_separator, group in groupby(
+            character_segments, key=lambda seg: seg.character == self.separator
+        ):
+            if not is_separator:
+                segments = list(group)
+                word = self.to_word(segments)
+                word_start = segments[0].start * frame_duration
+                word_end = segments[-1].end * frame_duration
+                words.append(
+                    Word(
+                        text=word,
+                        start=word_start,
+                        end=word_end,
                     )
-                i1 = i2 + 1
-                i2 = i1
-            else:
-                i2 += 1
+                )
 
         return words
 

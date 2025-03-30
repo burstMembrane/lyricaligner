@@ -1,26 +1,31 @@
 import json
+import logging
+import re
 from dataclasses import asdict, dataclass
 from typing import List
 
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 
 def to_lrc_time(seconds: float) -> str:
     """Convert seconds to LRC format time (MM:SS.mmm)"""
     minutes = int(seconds // 60)
-    seconds = seconds % 60
-    milliseconds = int((seconds % 1) * 1000)
-    seconds = int(seconds)
-    return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+    seconds_remainder = seconds % 60
+    seconds_int = int(seconds_remainder)
+    milliseconds = round((seconds_remainder - seconds_int) * 1000)
+    return f"{minutes:02d}:{seconds_int:02d}.{milliseconds:03d}"
 
 
 def to_srt_time(seconds: float) -> str:
     """Convert seconds to SRT format time (HH:MM:SS,mmm)"""
-    hours = int(seconds / 3600)
-    minutes = int((seconds % 3600) / 60)
-    seconds = int(seconds % 60)
-    milliseconds = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds_remainder = seconds % 60
+    seconds_int = int(seconds_remainder)
+    milliseconds = round((seconds_remainder - seconds_int) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{seconds_int:02d},{milliseconds:03d}"
 
 
 @dataclass
@@ -32,6 +37,9 @@ class Word:
     def as_lrc_tag(self, is_word: bool = True) -> str:
         tag = to_lrc_time(self.start)
         return f"<{tag}> {self.text}" if is_word else f"[{tag}]"
+
+    def as_srt_tag(self) -> str:
+        return f"{to_srt_time(self.start)} --> {to_srt_time(self.end)} {self.text}"
 
     def __repr__(self):
         return f"[{to_lrc_time(self.start)} --> {to_lrc_time(self.end)}] {self.text}\n"
@@ -60,38 +68,87 @@ class WordList:
     def __repr__(self):
         return "".join(word.as_str() for word in self.words)
 
+    def as_srt_full(self, original_lyrics: str) -> str:
+        """Format as SRT with full line text and line-level timings.
+        Falls back to punctuation-based splitting if no newlines are found.
+        """
+        srt = ""
+        counter = 1
+        word_index = 0
+
+        if "\n" in original_lyrics:
+            segments = [
+                line.strip() for line in original_lyrics.splitlines() if line.strip()
+            ]
+        else:
+            logger.warning(
+                "No newlines found in original lyrics, using punctuation-based splitting"
+            )
+            segments = re.split(r"(?<=[.!?])\s+", original_lyrics.strip())
+            segments = [seg.strip() for seg in segments if seg]
+
+        for segment in segments:
+            words_in_segment = segment.split()
+            num_words = len(words_in_segment)
+
+            if word_index + num_words > len(self.words):
+                raise IndexError("Not enough words in word list to match the lyrics.")
+
+            start_time = self.words[word_index].start
+            end_time = self.words[word_index + num_words - 1].end
+
+            srt += f"{counter}\n"
+            srt += f"{to_srt_time(start_time)} --> {to_srt_time(end_time)}\n"
+            srt += f"{segment}\n\n"
+
+            word_index += num_words
+            counter += 1
+
+        return srt
+
     def as_lrc_tags_only(self) -> str:
         """Return LRC tags without line timing"""
         return "".join(word.as_lrc_tag() for word in self.words)
 
     def as_lrc_full(self, original_lyrics: str) -> str:
-        """Format as complete LRC with line and word timings"""
+        """Format as complete LRC with line and word timings.
+        Falls back to punctuation-based splitting if no newlines are found.
+        """
         lrc = ""
         counter = 0
-        word_end = None
 
-        for line in original_lyrics.splitlines():
-            if not line.strip():
-                continue
+        if "\n" in original_lyrics:
+            segments = [
+                line.strip() for line in original_lyrics.splitlines() if line.strip()
+            ]
+        else:
+            logger.warning(
+                "No newlines found in original lyrics, using punctuation-based splitting"
+            )
+            segments = re.split(r"(?<=[.!?])\s+", original_lyrics.strip())
+            segments = [seg.strip() for seg in segments if seg]
 
-            if word_end:
-                lrc += f"\n[{to_lrc_time(word_end)}]"
-            else:
-                lrc += "[00:00.00]"
+        for segment in segments:
+            words_in_segment = segment.split()
+            num_words = len(words_in_segment)
 
-            for word_text in line.split():
-                if not word_text:
-                    continue
+            if counter + num_words > len(self.words):
+                raise IndexError("Not enough words in word list to match the lyrics.")
 
+            start_time = self.words[counter].start
+            lrc += f"[{to_lrc_time(start_time)}]"
+
+            for word_text in words_in_segment:
                 word = self.words[counter]
                 word.text = word_text
                 lrc += f" {word.as_lrc_tag()}"
-                word_end = word.end
                 counter += 1
+
+            lrc += "\n"
 
         return lrc
 
-    def to_srt(self) -> str:
+    def as_srt(self) -> str:
         """Format as SRT subtitle format"""
         srt = ""
         for i, word in enumerate(self.words):
@@ -144,9 +201,15 @@ And all the joy within you dies
 Don't you want somebody to love"""
 
     word_list = WordList.from_list(words)
+
     print("LRC format:")
     print(word_list.as_lrc_full(original_lyrics))
+
     print("\nSRT format:")
     print(word_list.to_srt())
+
+    print("\nSRT full format:")
+    print(word_list.as_srt_full(original_lyrics))
+
     print("\nJSON format:")
     print(word_list.to_json())
