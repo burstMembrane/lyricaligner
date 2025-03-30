@@ -54,18 +54,21 @@ class ASRTranscriber:
         self.total_duration_s = 0  # Reset duration
         segs = get_audio_segments(audio)
         logger.info(f"Segmenting audio into {len(segs)} segments")
-        segs = [
-            segs[i : i + self.batch_size] for i in range(0, len(segs), self.batch_size)
-        ]
-        # Process all segments
-        logits = torch.cat(
-            [
-                self._recognize(seg)
-                for seg in tqdm(segs, desc="Processing segments")
-                if self._recognize(seg).any()
-            ],
-            dim=1,
-        )
+
+        # Handle single segment case
+        if len(segs) == 1:
+            logits = self._recognize(segs[0])
+        else:
+            # Process segments in batches
+            all_logits = []
+            for i in range(0, len(segs), self.batch_size):
+                batch = segs[i : i + self.batch_size]
+                batch_logits = self._recognize_batch(batch)
+                all_logits.append(batch_logits)
+            logits = torch.cat(
+                [x.reshape(-1, x.size(-1)) for x in all_logits], dim=0
+            ).unsqueeze(0)
+
         emission = torch.log_softmax(logits, dim=-1)[0].cpu().detach()
         pred = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(pred)
@@ -75,10 +78,24 @@ class ASRTranscriber:
 
         return emission, pred, transcription, frame_duration
 
-    def tokenize(self, text_path):
-        """Tokenize text into input IDs for the model"""
-        text = self.lp.process(text_path)
-        return self.processor.tokenizer(text).input_ids
+    def _recognize_batch(self, audio_segments):
+        """Process a batch of audio segments"""
+        # Process each segment in the batch
+        inputs = self.processor(
+            audio_segments,
+            return_tensors="pt",
+            sampling_rate=TARGET_SR,
+            padding="longest",
+        ).input_values.to(self.device)
+
+        # Track duration for each segment in the batch
+        for i in range(len(audio_segments)):
+            segment_sec = inputs[i].shape[0] / TARGET_SR
+            self.total_duration_s += segment_sec
+
+        with torch.inference_mode():
+            logits = self.model(inputs).logits
+        return logits
 
     def _recognize(self, audio_segment):
         """Process a single audio segment"""
@@ -94,6 +111,11 @@ class ASRTranscriber:
         with torch.inference_mode():
             logits = self.model(inputs).logits
         return logits
+
+    def tokenize(self, text_path):
+        """Tokenize text into input IDs for the model"""
+        text = self.lp.process(text_path)
+        return self.processor.tokenizer(text).input_ids
 
     def get_labels(self):
         """Return sorted token labels used by the tokenizer"""
