@@ -6,7 +6,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 
-from lyricaligner.alignment import Aligner
+from lyricaligner.alignment import ForcedAligner
 from lyricaligner.asr_transcriber import ASRTranscriber
 from lyricaligner.config import DEFAULT_BLANK_TOKEN_ID, DEFAULT_MODEL, TARGET_SR
 from lyricaligner.formatters import WordList
@@ -30,7 +30,7 @@ class LyricsAligner:
         """Initialize the LyricsAligner
 
         Args:
-            model_id: ASR model ID to use (defaults to DEFAULT_MODEL)
+            model_id: ASR model ID to use (defaults to facebook/wav2vec2-large-960h-lv60-self)
             blank_id: ID of the blank token in the ASR model
         """
         self.asr = ASRTranscriber(
@@ -76,7 +76,11 @@ class LyricsAligner:
             WordList object with aligned words
         """
         # Align audio with lyrics
-        path = Aligner.align(emission, tokens, blank_id=self.blank_id)
+        path = ForcedAligner.align(
+            emission_log_probs=emission,
+            token_ids=tokens,
+            blank_token_id=self.blank_id,
+        )
         words = self.lp.get_words_from_path(processed_lyrics, path, frame_duration)
         return WordList.from_list(words)
 
@@ -92,13 +96,13 @@ class LyricsAligner:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        save_csv(words, output_dir, output_name)
+        save_csv(words, output_dir, output_name, lyrics_text)
         save_lrc(words, output_dir, output_name, lyrics_text)
         # save the word level srt
         save_srt(words, output_dir, f"{output_name}.word")
         # save the line level srt
         save_srt(words, output_dir, output_name, lyrics_text)
-        # save as JSON
+        # save as JSON (TODO: add phrase level timestamps with lyrics text)
         save_json(words, output_dir, output_name)
 
     def sync(

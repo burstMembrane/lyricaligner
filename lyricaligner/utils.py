@@ -121,7 +121,7 @@ def save_lrc(words: WordList, output_dir: Path, name: str, original_lyrics: str 
         f.write(lrc)
 
 
-def save_csv(words: WordList, output_dir: Path, name: str):
+def save_csv(words: WordList, output_dir: Path, name: str, lyrics_text: str):
     """Save word timing information to a CSV file
 
     Args:

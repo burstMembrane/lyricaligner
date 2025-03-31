@@ -44,27 +44,32 @@ class LyricsProcessor:
         for i in range(len(alignment_path)):
             if (
                 i == 0
-                or alignment_path[i].token_index != alignment_path[i - 1].token_index
+                or alignment_path[i].token_position
+                != alignment_path[i - 1].token_position
             ):
                 # Start of a new character segment
                 start_idx = i
             if (
                 i == len(alignment_path) - 1
-                or alignment_path[i].token_index != alignment_path[i + 1].token_index
+                or alignment_path[i].token_position
+                != alignment_path[i + 1].token_position
             ):
-                # End of current character segment
                 character_segments.append(
                     CharacterSegment(
-                        character=source_text[alignment_path[i].token_index],
-                        start=alignment_path[start_idx].time_index,
-                        end=alignment_path[i].time_index + 1,
+                        character=source_text[alignment_path[i].token_position],
+                        start=alignment_path[start_idx].frame_index,
+                        end=alignment_path[i].frame_index + 1,
                     )
                 )
 
         return self._merge_segments_to_words(character_segments, frame_duration)
 
     def to_word(self, character_segments: list[CharacterSegment]):
-        return "".join(seg.character for seg in character_segments)
+        word = "".join(seg.character for seg in character_segments)
+        # convert back to original case
+        if self.is_upper:
+            word = word.lower()
+        return word
 
     def _merge_segments_to_words(
         self, character_segments: list[CharacterSegment], frame_duration: float

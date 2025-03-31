@@ -1,12 +1,12 @@
 import pytest
 import torch
 
-from lyricaligner.alignment import Aligner
+from lyricaligner.alignment import ForcedAligner
 
 
 @pytest.fixture
 def aligner():
-    return Aligner()
+    return ForcedAligner()
 
 
 def test_alignment(aligner):

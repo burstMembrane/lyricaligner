@@ -173,6 +173,168 @@ class WordList:
         return self.words[index]
 
 
+@dataclass
+class Phrase:
+    """Represents a phrase (line) of text with start and end times"""
+
+    text: str
+    start: float
+    end: float
+    words: List[Word]
+
+    def __repr__(self):
+        return f"[{to_lrc_time(self.start)} --> {to_lrc_time(self.end)}] {self.text}\n"
+
+    def as_str(self):
+        return f"[{to_lrc_time(self.start)} --> {to_lrc_time(self.end)}] {self.text}\n"
+
+    def as_lrc_line(self) -> str:
+        """Format as LRC line with timestamp"""
+        return f"[{to_lrc_time(self.start)}]{self.text}\n"
+
+    def as_lrc_line_with_word_tags(self) -> str:
+        """Format as LRC line with both line timestamp and word timestamps"""
+        line = f"[{to_lrc_time(self.start)}]"
+        for word in self.words:
+            line += f" {word.as_lrc_tag()}"
+        return line + "\n"
+
+    def as_srt_entry(self, index: int) -> str:
+        """Format as an SRT entry"""
+        return f"{index}\n{to_srt_time(self.start)} --> {to_srt_time(self.end)}\n{self.text}\n\n"
+
+
+@dataclass
+class PhraseList:
+    """Collection of phrases with methods to create and format phrase-level alignments"""
+
+    phrases: List[Phrase]
+
+    def __len__(self):
+        return len(self.phrases)
+
+    def __iter__(self):
+        return iter(self.phrases)
+
+    def __getitem__(self, index):
+        return self.phrases[index]
+
+    def __repr__(self):
+        return "".join(phrase.as_str() for phrase in self.phrases)
+
+    @classmethod
+    def from_wordlist(cls, word_list: WordList, original_lyrics: str) -> "PhraseList":
+        """Create a PhraseList from a WordList and original lyrics text
+
+        Args:
+            word_list: The word-level alignments
+            original_lyrics: Original text with phrase-level structure
+
+        Returns:
+            PhraseList with phrase-level alignments
+        """
+        phrases = []
+        word_index = 0
+
+        # Try to split by newlines first, otherwise use punctuation
+        if "\n" in original_lyrics:
+            segments = [
+                line.strip() for line in original_lyrics.splitlines() if line.strip()
+            ]
+        else:
+            logger.warning(
+                "No newlines found in original lyrics, using punctuation-based splitting"
+            )
+            segments = re.split(r"(?<=[.!?])\s+", original_lyrics.strip())
+            segments = [seg.strip() for seg in segments if seg]
+
+        for segment in segments:
+            words_in_segment = segment.split()
+            num_words = len(words_in_segment)
+
+            if word_index + num_words > len(word_list):
+                raise IndexError("Not enough words in word list to match the lyrics.")
+
+            # Get the words for this phrase
+            phrase_words = word_list.words[word_index : word_index + num_words]
+
+            # Create a phrase with start time from the first word and end time from the last word
+            phrase = Phrase(
+                text=segment,
+                start=phrase_words[0].start,
+                end=phrase_words[-1].end,
+                words=phrase_words,
+            )
+
+            phrases.append(phrase)
+            word_index += num_words
+
+        return cls(phrases=phrases)
+
+    def as_lrc(self, include_word_tags: bool = True) -> str:
+        """Format as LRC with optional word-level tags
+
+        Args:
+            include_word_tags: Whether to include word-level timestamps
+
+        Returns:
+            String in LRC format
+        """
+        if include_word_tags:
+            return "".join(
+                phrase.as_lrc_line_with_word_tags() for phrase in self.phrases
+            )
+        else:
+            return "".join(phrase.as_lrc_line() for phrase in self.phrases)
+
+    def as_srt(self) -> str:
+        """Format as SRT subtitle format
+
+        Returns:
+            String in SRT format
+        """
+        return "".join(
+            phrase.as_srt_entry(i + 1) for i, phrase in enumerate(self.phrases)
+        )
+
+    def as_json(self) -> str:
+        """Format as JSON
+
+        Returns:
+            JSON string with phrase data
+        """
+        phrases_data = []
+        for phrase in self.phrases:
+            phrase_dict = {
+                "text": phrase.text,
+                "start": phrase.start,
+                "end": phrase.end,
+                "words": [asdict(word) for word in phrase.words],
+            }
+            phrases_data.append(phrase_dict)
+
+        return json.dumps(phrases_data, indent=4)
+
+    def as_df(self) -> pd.DataFrame:
+        """Format as DataFrame
+
+        Returns:
+            Pandas DataFrame with phrase data
+        """
+        phrases_data = []
+        for phrase in self.phrases:
+            phrase_dict = {
+                "text": phrase.text,
+                "start": phrase.start,
+                "end": phrase.end,
+                "duration": phrase.end - phrase.start,
+                "word_count": len(phrase.words),
+            }
+            phrases_data.append(phrase_dict)
+
+        return pd.DataFrame(phrases_data)
+
+
 if __name__ == "__main__":
     words = [
         Word(text="When", start=0.04, end=0.16),
@@ -202,15 +364,22 @@ And all the joy within you dies
 Don't you want somebody to love"""
 
     word_list = WordList.from_list(words)
+    phrase_list = PhraseList.from_wordlist(word_list, original_lyrics)
 
-    print("LRC format:")
-    print(word_list.as_lrc_full(original_lyrics))
+    print("WordList representation:")
+    print(word_list)
+
+    print("\nPhraseList representation:")
+    print(phrase_list)
+
+    print("\nLRC format with word tags:")
+    print(phrase_list.as_lrc(include_word_tags=True))
+
+    print("\nLRC format without word tags:")
+    print(phrase_list.as_lrc(include_word_tags=False))
 
     print("\nSRT format:")
-    print(word_list.to_srt())
-
-    print("\nSRT full format:")
-    print(word_list.as_srt_full(original_lyrics))
+    print(phrase_list.as_srt())
 
     print("\nJSON format:")
-    print(word_list.to_json())
+    print(phrase_list.as_json())

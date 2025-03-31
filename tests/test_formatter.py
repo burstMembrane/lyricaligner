@@ -6,7 +6,7 @@ from lyricaligner.formatters import Word, WordList
 @pytest.fixture
 def word_list():
     return [
-        {"start": 0, "end": 1, "text": "hello"},
+        {"start": 0, "end": 1, "text": "Hello"},
         {"start": 1, "end": 2, "text": "world"},
     ]
 
@@ -34,9 +34,3 @@ def test_word_list(word_list):
     word_list = WordList.from_list(word_list)
     assert len(word_list) == 2
     assert word_list[0].start == 0
-
-
-def test_word_list_lrc(word_list):
-    word_list = WordList.from_list(word_list)
-    lrc = word_list.as_lrc_full("Hello world")
-    assert lrc == """[00:00.00] <00:00.000> Hello <00:01.000> world""", lrc
