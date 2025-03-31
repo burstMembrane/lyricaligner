@@ -7,7 +7,7 @@ __pycache__/
 .DS_Store
 # C extensions
 *.so
-
+.test/
 # Distribution / packaging
 .Python
 build/
