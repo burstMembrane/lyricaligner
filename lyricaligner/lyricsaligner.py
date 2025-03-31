@@ -49,7 +49,8 @@ class LyricsAligner:
             Normalized audio at TARGET_SR sample rate
         """
         # Load audio
-        audio, sr = librosa.load(audio_fn, sr=None, mono=True, dtype=np.float32)
+        audio, sr = librosa.load(
+            audio_fn, sr=None, mono=True, dtype=np.float32)
 
         # Normalize audio
         if normalize:
@@ -81,7 +82,8 @@ class LyricsAligner:
             token_ids=tokens,
             blank_token_id=self.blank_id,
         )
-        words = self.lp.get_words_from_path(processed_lyrics, path, frame_duration)
+        words = self.lp.get_words_from_path(
+            processed_lyrics, path, frame_duration)
         return WordList.from_list(words)
 
     def _save_results(self, words, lyrics_text, output_dir, output_name):
@@ -106,7 +108,11 @@ class LyricsAligner:
         save_json(words, output_dir, output_name)
 
     def sync(
-        self, audio_fn: str, text_fn: str, output_dir: str = "alignment", save=False
+        self,
+        audio_fn: str,
+        text_fn: str,
+        output_dir: str = "output",
+        save=False
     ):
         """Synchronize lyrics with audio
 
@@ -147,8 +153,8 @@ class LyricsAligner:
         self,
         audio_array: np.ndarray,
         lyrics_text: str,
-        output_dir: str = "alignment",
-        output_name: str = "alignment",
+        output_dir: str = "output",
+        output_name: str = "output",
         save=True,
     ):
         """Synchronize lyrics with audio directly from audio array and lyrics string

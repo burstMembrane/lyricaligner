@@ -41,7 +41,8 @@ The tool will generate:
 
 - CSV file with word-level timing information
 - LRC file compatible with media players
-
+- Word and phrase level SRT files
+- JSON file with phrase and word level timestamps
 ### Using as a Python Module
 
 ```python

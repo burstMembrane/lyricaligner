@@ -12,7 +12,8 @@ from lyricaligner.formatters import WordList
 logger = logging.getLogger(__name__)
 
 # Audio segmentation parameters
-window_size = int(TARGET_SR * WINDOW_LENGTH)  # 15 seconds of audio at TARGET_SR
+# 15 seconds of audio at TARGET_SR
+window_size = int(TARGET_SR * WINDOW_LENGTH)
 hop_length = window_size
 
 
@@ -37,7 +38,9 @@ def get_audio_segments(
 
 
 def get_audio_segments_by_onsets(audio):
-    onset_times = librosa.onset.onset_detect(y=audio, sr=TARGET_SR, backtrack=True)
+    onset_times = librosa.onset.onset_detect(y=audio,
+                                             sr=TARGET_SR,
+                                             backtrack=True)
     onset_boundaries = np.concatenate([onset_times, [len(audio)]])
     segments = []
     start_onset = 0
