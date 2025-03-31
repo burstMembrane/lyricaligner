@@ -11,7 +11,7 @@ from lyricaligner.asr_transcriber import ASRTranscriber
 from lyricaligner.config import DEFAULT_BLANK_TOKEN_ID, DEFAULT_MODEL, TARGET_SR
 from lyricaligner.formatters import WordList
 from lyricaligner.lyrics_processor import LyricsProcessor
-from lyricaligner.utils import read_text, save_csv, save_lrc, save_srt
+from lyricaligner.utils import read_text, save_csv, save_json, save_lrc, save_srt
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -89,15 +89,17 @@ class LyricsAligner:
             output_dir: Output directory
             output_name: Base name for output files
         """
-        lrc = words.as_lrc_full(lyrics_text)
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+
         save_csv(words, output_dir, output_name)
-        save_lrc(lrc, output_dir, output_name)
+        save_lrc(words, output_dir, output_name, lyrics_text)
         # save the word level srt
-        save_srt(words.as_srt(), output_dir, f"{output_name}.word")
+        save_srt(words, output_dir, f"{output_name}.word")
         # save the line level srt
-        save_srt(words.as_srt_full(lyrics_text), output_dir, output_name)
+        save_srt(words, output_dir, output_name, lyrics_text)
+        # save as JSON
+        save_json(words, output_dir, output_name)
 
     def sync(
         self, audio_fn: str, text_fn: str, output_dir: str = "alignment", save=False

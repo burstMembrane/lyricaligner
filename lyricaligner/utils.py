@@ -59,34 +59,66 @@ def read_text(text_path):
         return file.read()
 
 
-def save_srt(srt: str, output_dir: Path, name: str):
-    """Save SRT format lyrics to a file
+def save_srt(words: WordList, output_dir: Path, name: str, original_lyrics: str = None):
+    """Save alignment as SRT subtitle file
 
     Args:
-        srt: SRT format string
+        words: WordList object
+        output_dir: Output directory
         name: Base name for the output file
+        original_lyrics: Optional original lyrics text for line-level SRT
     """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if original_lyrics is not None and ".word" not in name:
+        # Line-level SRT
+        srt = words.as_srt_full(original_lyrics)
+    else:
+        # Word-level SRT
+        srt = words.as_srt()
+
     logger.info(f"Saving SRT to {output_dir}/{name}.srt")
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    with open(f"{output_dir}/{name}.srt", "w+") as fp:
-        fp.write(srt)
+    with open(f"{output_dir}/{name}.srt", "w", encoding="utf-8") as f:
+        f.write(srt)
 
 
-def save_lrc(lrc: str, output_dir: Path, name: str):
-    """Save LRC format lyrics to a file
+def save_json(words: WordList, output_dir: Path, name: str):
+    """Save alignment as JSON file
 
     Args:
-        lrc: LRC format string
+        words: WordList object
+        output_dir: Output directory
         name: Base name for the output file
     """
-    logger.info(f"Saving LRC to {output_dir}/{name}.lrc")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    json_data = words.as_json()
 
+    logger.info(f"Saving JSON to {output_dir}/{name}.json")
+    with open(f"{output_dir}/{name}.json", "w", encoding="utf-8") as f:
+        f.write(json_data)
+
+
+def save_lrc(words: WordList, output_dir: Path, name: str, original_lyrics: str = None):
+    """Save alignment as LRC lyrics file
+
+    Args:
+        words: WordList object
+        output_dir: Output directory
+        name: Base name for the output file
+        original_lyrics: Optional original lyrics text for full LRC
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    with open(f"{output_dir}/{name}.lrc", "w+") as fp:
-        fp.write(lrc)
+    if original_lyrics is not None:
+        # Full LRC with line and word timings
+        lrc = words.as_lrc_full(original_lyrics)
+    else:
+        # LRC with word timings only
+        lrc = words.as_lrc_tags_only()
+
+    logger.info(f"Saving LRC to {output_dir}/{name}.lrc")
+    with open(f"{output_dir}/{name}.lrc", "w", encoding="utf-8") as f:
+        f.write(lrc)
 
 
 def save_csv(words: WordList, output_dir: Path, name: str):
@@ -96,7 +128,7 @@ def save_csv(words: WordList, output_dir: Path, name: str):
         words: WordList object
         name: Base name for the output file
     """
-    df = words.to_df()
+    df = words.as_df()
     logger.info(f"Saving CSV to {output_dir}/{name}.csv")
     output_dir.mkdir(parents=True, exist_ok=True)
     df.to_csv(f"{output_dir}/{name}.csv", index=False)

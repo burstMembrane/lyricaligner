@@ -55,13 +55,15 @@ class ASRTranscriber:
         segs = get_audio_segments(audio)
         logger.info(f"Segmenting audio into {len(segs)} segments")
 
-        # Handle single segment case
         if len(segs) == 1:
             logits = self._recognize(segs[0])
         else:
-            # Process segments in batches
             all_logits = []
-            for i in range(0, len(segs), self.batch_size):
+            for i in tqdm(
+                range(0, len(segs), self.batch_size),
+                desc="Aligning segments",
+                total=len(segs) / self.batch_size,
+            ):
                 batch = segs[i : i + self.batch_size]
                 batch_logits = self._recognize_batch(batch)
                 all_logits.append(batch_logits)
@@ -72,8 +74,7 @@ class ASRTranscriber:
         emission = torch.log_softmax(logits, dim=-1)[0].cpu().detach()
         pred = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(pred)
-
-        # Compute time per frame
+        # compute time per frame
         frame_duration = self.model.config.inputs_to_logits_ratio / TARGET_SR
 
         return emission, pred, transcription, frame_duration
@@ -114,6 +115,7 @@ class ASRTranscriber:
 
     def tokenize(self, text_path):
         """Tokenize text into input IDs for the model"""
+        # preprocess the input text to something the model recognizes
         text = self.lp.process(text_path)
         return self.processor.tokenizer(text).input_ids
 

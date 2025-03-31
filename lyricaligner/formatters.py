@@ -155,14 +155,15 @@ class WordList:
             srt += f"{i + 1}\n{to_srt_time(word.start)} --> {to_srt_time(word.end)}\n{word.text}\n\n"
         return srt
 
-    def to_json(self) -> str:
+    def as_json(self) -> str:
         """Format as JSON"""
         return json.dumps([asdict(word) for word in self.words], indent=4)
 
-    def to_df(self) -> pd.DataFrame:
+    def as_df(self, with_length: bool = True) -> pd.DataFrame:
         """Format as CSV"""
         df = pd.DataFrame([asdict(word) for word in self.words])
-        df["length"] = df["end"] - df["start"]
+        if with_length:
+            df["length"] = df["end"] - df["start"]
         return df
 
     def __iter__(self):

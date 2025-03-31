@@ -1,6 +1,7 @@
 import argparse
 import logging
 from pathlib import Path
+from typing import List
 
 from lyricaligner.lyricsaligner import LyricsAligner
 
@@ -51,6 +52,13 @@ def parse_args():
         type=str,
         default="facebook/wav2vec2-large-960h-lv60-self",
         help="The huggingface model id to use. Must be compatible with the Wav2Vec2Processor",
+    )
+    parser.add_argument(
+        "-f",
+        "--output_formats",
+        type=List[str],
+        default=["lrc", "srt", "json", "csv"],
+        help="The formats to save the output in: default is lrc, srt, json, csv",
     )
     return parser.parse_args()
 
