@@ -183,3 +183,9 @@ cython_debug/
 *.srt
 data/
 output/
+
+# Added by ob
+lyricaligner.md
+
+# Added by ob
+.ob
