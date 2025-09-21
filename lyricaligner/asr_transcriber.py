@@ -74,8 +74,15 @@ class ASRTranscriber:
         emission = torch.log_softmax(logits, dim=-1)[0].cpu().detach()
         pred = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(pred)
-        # compute time per frame
-        frame_duration = self.model.config.inputs_to_logits_ratio / TARGET_SR
+        
+        # compute time per frame with dynamic correction
+        from lyricaligner.timing_utils import calculate_dynamic_frame_duration
+        model_frame_duration = self.model.config.inputs_to_logits_ratio / TARGET_SR
+        audio_length = self.total_duration_s if self.total_duration_s > 0 else len(audio) / TARGET_SR
+        total_frames = emission.shape[0]
+        frame_duration = calculate_dynamic_frame_duration(
+            audio_length, total_frames, model_frame_duration
+        )
 
         return emission, pred, transcription, frame_duration
 

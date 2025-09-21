@@ -33,6 +33,7 @@ class Word:
     text: str
     start: float
     end: float
+    confidence: float = 0.0
 
     def as_lrc_tag(self, is_word: bool = True) -> str:
         tag = to_lrc_time(self.start)

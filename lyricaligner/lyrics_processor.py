@@ -12,6 +12,7 @@ class CharacterSegment:
     character: str
     start: int
     end: int
+    confidence: float = 0.0
 
 
 class LyricsProcessor:
@@ -54,11 +55,17 @@ class LyricsProcessor:
                 or alignment_path[i].token_position
                 != alignment_path[i + 1].token_position
             ):
+                # Calculate average confidence for this character segment
+                segment_confidence = sum(
+                    alignment_path[j].confidence for j in range(start_idx, i + 1)
+                ) / (i - start_idx + 1)
+                
                 character_segments.append(
                     CharacterSegment(
                         character=source_text[alignment_path[i].token_position],
                         start=alignment_path[start_idx].frame_index,
                         end=alignment_path[i].frame_index + 1,
+                        confidence=segment_confidence,
                     )
                 )
 
@@ -74,7 +81,13 @@ class LyricsProcessor:
     def _merge_segments_to_words(
         self, character_segments: list[CharacterSegment], frame_duration: float
     ):
-        """Merge character segments into words"""
+        """Merge character segments into words with timing corrections"""
+        from lyricaligner.timing_utils import (
+            detect_timing_drift, 
+            smooth_timing_with_confidence,
+            apply_timing_anchors
+        )
+        
         words = []
         for is_separator, group in groupby(
             character_segments, key=lambda seg: seg.character == self.separator
@@ -84,13 +97,26 @@ class LyricsProcessor:
                 word = self.to_word(segments)
                 word_start = segments[0].start * frame_duration
                 word_end = segments[-1].end * frame_duration
+                
+                # Calculate average confidence for the word
+                avg_confidence = sum(getattr(seg, 'confidence', 0.5) for seg in segments) / len(segments)
+                
                 words.append(
                     Word(
                         text=word,
                         start=word_start,
                         end=word_end,
+                        confidence=avg_confidence
                     )
                 )
+
+        # Apply timing corrections if we have enough words
+        if len(words) > 5:
+            # Check for timing drift
+            if detect_timing_drift(words):
+                # Apply smoothing and anchoring
+                words = smooth_timing_with_confidence(words)
+                words = apply_timing_anchors(words)
 
         return words
 
