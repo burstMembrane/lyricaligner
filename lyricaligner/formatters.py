@@ -2,9 +2,10 @@ import json
 import logging
 import re
 from dataclasses import asdict, dataclass
-from typing import List
+from typing import TYPE_CHECKING, List
 
-import pandas as pd
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -160,8 +161,10 @@ class WordList:
         """Format as JSON"""
         return json.dumps([asdict(word) for word in self.words], indent=4)
 
-    def as_df(self, with_length: bool = True) -> pd.DataFrame:
+    def as_df(self, with_length: bool = True) -> "pd.DataFrame":
         """Format as CSV"""
+        import pandas as pd
+
         df = pd.DataFrame([asdict(word) for word in self.words])
         if with_length:
             df["length"] = df["end"] - df["start"]
@@ -316,12 +319,14 @@ class PhraseList:
 
         return json.dumps(phrases_data, indent=4)
 
-    def as_df(self) -> pd.DataFrame:
+    def as_df(self) -> "pd.DataFrame":
         """Format as DataFrame
 
         Returns:
             Pandas DataFrame with phrase data
         """
+        import pandas as pd
+
         phrases_data = []
         for phrase in self.phrases:
             phrase_dict = {

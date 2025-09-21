@@ -1,8 +1,10 @@
 """Module for aligning audio emissions with text tokens using forced alignment"""
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-import torch
+if TYPE_CHECKING:
+    import torch
 
 
 @dataclass
@@ -19,7 +21,9 @@ class ForcedAligner:
 
     @staticmethod
     def align(
-        emission_log_probs: torch.Tensor, token_ids: list[int], blank_token_id: int = 0
+        emission_log_probs: "torch.Tensor",
+        token_ids: list[int],
+        blank_token_id: int = 0,
     ):
         """
         Aligns log-probabilities with token sequence using forced alignment.
@@ -42,7 +46,7 @@ class ForcedAligner:
 
     @staticmethod
     def _compute_trellis(
-        emission_log_probs: torch.Tensor, token_ids: list[int], blank_token_id: int
+        emission_log_probs: "torch.Tensor", token_ids: list[int], blank_token_id: int
     ):
         """
         Construct the trellis (DP matrix) used for alignment.
@@ -55,6 +59,8 @@ class ForcedAligner:
         Returns:
             Trellis matrix for alignment
         """
+        import torch
+
         num_frames = emission_log_probs.size(0)
         num_tokens = len(token_ids)
         trellis = torch.empty((num_frames + 1, num_tokens + 1))
@@ -72,8 +78,8 @@ class ForcedAligner:
 
     @staticmethod
     def _backtrack_path(
-        trellis: torch.Tensor,
-        emission_log_probs: torch.Tensor,
+        trellis: "torch.Tensor",
+        emission_log_probs: "torch.Tensor",
         token_ids: list[int],
         blank_token_id: int,
     ):
@@ -89,6 +95,8 @@ class ForcedAligner:
         Returns:
             List of Point in chronological order
         """
+        import torch
+
         token_pos = trellis.size(1) - 1
         frame_start = torch.argmax(trellis[:, token_pos]).item()
 

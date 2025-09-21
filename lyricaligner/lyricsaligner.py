@@ -3,8 +3,9 @@
 import logging
 from pathlib import Path
 
-import librosa
 import numpy as np
+import soundfile as sf
+import soxr
 
 from lyricaligner.alignment import ForcedAligner
 from lyricaligner.asr_transcriber import ASRTranscriber
@@ -49,8 +50,11 @@ class LyricsAligner:
             Normalized audio at TARGET_SR sample rate
         """
         # Load audio
-        audio, sr = librosa.load(
-            audio_fn, sr=None, mono=True, dtype=np.float32)
+        audio, sr = sf.read(audio_fn, dtype=np.float32)
+
+        # Convert to mono if stereo
+        if len(audio.shape) > 1:
+            audio = np.mean(audio, axis=1)
 
         # Normalize audio
         if normalize:
@@ -59,7 +63,7 @@ class LyricsAligner:
         # Resample audio if needed
         if sr != TARGET_SR:
             logger.info(f"Resampling audio from {sr}Hz to {TARGET_SR}Hz")
-            audio = librosa.resample(audio, orig_sr=sr, target_sr=TARGET_SR)
+            audio = soxr.resample(audio, in_rate=sr, out_rate=TARGET_SR)
 
         logger.info(f"Loaded audio from {audio_fn} with shape {audio.shape}")
         return audio
@@ -82,8 +86,7 @@ class LyricsAligner:
             token_ids=tokens,
             blank_token_id=self.blank_id,
         )
-        words = self.lp.get_words_from_path(
-            processed_lyrics, path, frame_duration)
+        words = self.lp.get_words_from_path(processed_lyrics, path, frame_duration)
         return WordList.from_list(words)
 
     def _save_results(self, words, lyrics_text, output_dir, output_name):
@@ -98,7 +101,7 @@ class LyricsAligner:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        save_csv(words, output_dir, output_name, lyrics_text)
+        save_csv(words, output_dir, output_name)
         save_lrc(words, output_dir, output_name, lyrics_text)
         # save the word level srt
         save_srt(words, output_dir, f"{output_name}.word")
@@ -107,13 +110,7 @@ class LyricsAligner:
         # save as JSON (TODO: add phrase level timestamps with lyrics text)
         save_json(words, output_dir, output_name)
 
-    def sync(
-        self,
-        audio_fn: str,
-        text_fn: str,
-        output_dir: str = "output",
-        save=False
-    ):
+    def sync(self, audio_fn: str, text_fn: str, output_dir: str = "output", save=False):
         """Synchronize lyrics with audio
 
         Args:

@@ -1,9 +1,10 @@
 """Utility functions for audio processing and file operations"""
 
+import csv
 import logging
+from dataclasses import asdict
 from pathlib import Path
 
-import librosa
 import numpy as np
 
 from lyricaligner.config import TARGET_SR, WINDOW_LENGTH
@@ -18,35 +19,35 @@ hop_length = window_size
 
 
 def get_audio_segments(
-    audio: np.ndarray, window_size=window_size, hop_length=hop_length
+    audio: np.ndarray, window_size: int = window_size, hop_length: int = hop_length
 ):
-    """Split audio into fixed-length segments for processing
+    """Split audio into fixed-length segments for processing.
 
     Args:
-        audio: Audio array to segment
+        audio: 1D numpy array containing audio samples
+        window_size: Size of each frame/segment
+        hop_length: Step size between successive frames
 
     Returns:
-        List of audio segments
+        A 2D numpy array of shape (num_frames, window_size)
     """
+    n_samples = len(audio)
+
     # Handle short audio files
-    if len(audio) < window_size:
-        return [audio]
+    if n_samples < window_size:
+        return audio[np.newaxis, :]  # return shape (1, N)
 
-    return librosa.util.frame(
-        audio, frame_length=window_size, hop_length=hop_length, axis=0
+    # Calculate number of frames that fit
+    num_frames = 1 + (n_samples - window_size) // hop_length
+
+    # Compute strides (bytes to step for each axis)
+    stride = audio.strides[0]
+    return np.lib.stride_tricks.as_strided(
+        audio,
+        shape=(num_frames, window_size),
+        strides=(hop_length * stride, stride),
+        writeable=False,  # safer: returned view is read-only
     )
-
-
-def get_audio_segments_by_onsets(audio):
-    onset_times = librosa.onset.onset_detect(y=audio,
-                                             sr=TARGET_SR,
-                                             backtrack=True)
-    onset_boundaries = np.concatenate([onset_times, [len(audio)]])
-    segments = []
-    start_onset = 0
-    for onset in onset_boundaries:
-        segments.append(audio[start_onset:onset])
-    return segments
 
 
 def read_text(text_path):
@@ -124,14 +125,27 @@ def save_lrc(words: WordList, output_dir: Path, name: str, original_lyrics: str 
         f.write(lrc)
 
 
-def save_csv(words: WordList, output_dir: Path, name: str, lyrics_text: str):
+def save_csv(words, output_dir: Path, name: str):
     """Save word timing information to a CSV file
 
     Args:
         words: WordList object
+        output_dir: Output directory Path
         name: Base name for the output file
     """
-    df = words.as_df()
-    logger.info(f"Saving CSV to {output_dir}/{name}.csv")
+    # Convert to a list of dictionaries or tuples
+    records = [asdict(word) for word in words.words]
+
+    if not records:
+        logger.warning("No words to save.")
+        return
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    df.to_csv(f"{output_dir}/{name}.csv", index=False)
+    out_path = output_dir / f"{name}.csv"
+
+    fieldnames = list(records[0].keys())
+    logger.info(f"Saving CSV to {out_path}")
+    with out_path.open(mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(records)
