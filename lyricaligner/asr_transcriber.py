@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+from line_profiler import profile
 from tqdm import tqdm
 
 from lyricaligner.config import DEFAULT_MODEL, TARGET_SR
@@ -10,6 +11,7 @@ from lyricaligner.utils import get_audio_segments
 logger = logging.getLogger(__name__)
 
 
+@profile
 class ASRTranscriber:
     def __init__(
         self,

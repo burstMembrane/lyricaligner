@@ -20,6 +20,7 @@ include = ["lyricaligner"]
 [tool.uv]
 dev-dependencies = [
     "ipykernel>=6.29.5",
+    "line-profiler>=5.0.0",
     "pytest>=8.3.5",
 ]
 [tool.pytest.ini_options]

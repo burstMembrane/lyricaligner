@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import torch
+from line_profiler import profile
 
 
 @dataclass
@@ -16,6 +17,7 @@ class Point:
     confidence: float  # Confidence score (exp of log-probability)
 
 
+@profile
 class ForcedAligner:
     """Aligns audio emissions with text tokens using dynamic programming"""
 

@@ -26,7 +26,7 @@ class LyricsProcessor:
         return self._preprocess_text(text)
 
     def _preprocess_text(self, text: str, is_upper=True):
-        """Preprocess text for alignment by converting to lowercase and adding separators"""
+        """Preprocess text for alignment by converting to upper/lowercase and adding separators"""
         if is_upper:
             text = text.upper()
         else:
@@ -59,7 +59,7 @@ class LyricsProcessor:
                 segment_confidence = sum(
                     alignment_path[j].confidence for j in range(start_idx, i + 1)
                 ) / (i - start_idx + 1)
-                
+
                 character_segments.append(
                     CharacterSegment(
                         character=source_text[alignment_path[i].token_position],
@@ -83,11 +83,11 @@ class LyricsProcessor:
     ):
         """Merge character segments into words with timing corrections"""
         from lyricaligner.timing_utils import (
-            detect_timing_drift, 
+            apply_timing_anchors,
+            detect_timing_drift,
             smooth_timing_with_confidence,
-            apply_timing_anchors
         )
-        
+
         words = []
         for is_separator, group in groupby(
             character_segments, key=lambda seg: seg.character == self.separator
@@ -97,16 +97,18 @@ class LyricsProcessor:
                 word = self.to_word(segments)
                 word_start = segments[0].start * frame_duration
                 word_end = segments[-1].end * frame_duration
-                
+
                 # Calculate average confidence for the word
-                avg_confidence = sum(getattr(seg, 'confidence', 0.5) for seg in segments) / len(segments)
-                
+                avg_confidence = sum(
+                    getattr(seg, "confidence", 0.5) for seg in segments
+                ) / len(segments)
+
                 words.append(
                     Word(
                         text=word,
                         start=word_start,
                         end=word_end,
-                        confidence=avg_confidence
+                        confidence=avg_confidence,
                     )
                 )
 

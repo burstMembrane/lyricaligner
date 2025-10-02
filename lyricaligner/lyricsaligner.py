@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import soxr
+from line_profiler import profile
 
 from lyricaligner.alignment import ForcedAligner
 from lyricaligner.asr_transcriber import ASRTranscriber
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+@profile
 class LyricsAligner:
     """Main class for aligning lyrics with audio"""
 
@@ -34,6 +36,7 @@ class LyricsAligner:
             model_id: ASR model ID to use (defaults to facebook/wav2vec2-large-960h-lv60-self)
             blank_id: ID of the blank token in the ASR model
         """
+        # the transcriber module
         self.asr = ASRTranscriber(
             model_id=model_id, device=device, batch_size=batch_size
         )

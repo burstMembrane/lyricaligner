@@ -4,8 +4,10 @@ import csv
 import logging
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import numpy as np
+if TYPE_CHECKING:
+    import numpy as np
 
 from lyricaligner.config import TARGET_SR, WINDOW_LENGTH
 from lyricaligner.formatters import WordList
@@ -19,7 +21,7 @@ hop_length = window_size
 
 
 def get_audio_segments(
-    audio: np.ndarray, window_size: int = window_size, hop_length: int = hop_length
+    audio: "np.ndarray", window_size: int = window_size, hop_length: int = hop_length
 ):
     """Split audio into fixed-length segments for processing.
 
@@ -31,6 +33,8 @@ def get_audio_segments(
     Returns:
         A 2D numpy array of shape (num_frames, window_size)
     """
+    import numpy as np
+
     n_samples = len(audio)
 
     # Handle short audio files
